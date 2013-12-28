@@ -1,0 +1,240 @@
+<!doctype html>
+<html>
+<head>
+    <title>Sliding Tiles Puzzle!</title>
+    <script src="jquery-1.10.2.min.js"></script>
+    <style type="text/css">
+        #puzzleDiv {
+            background-color: #808080;
+            position: relative;
+            overflow: hidden;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .number {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            right: 2px;
+            top: 2px;
+            font-family: sans-serif;
+            font-size: 14px;
+            color: white;
+            padding: 2px 4px;
+            background-color: rgba(50, 50, 50, 0.8);
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .puzzlePiece {
+            border: 1px solid white;
+        }
+
+            .puzzlePiece:hover {
+                border: 1px dashed white;
+            }
+
+        #resetButton {
+            font-size: 20px;
+            margin-top: 10px;
+            margin-left: 200px;
+        }
+    </style>
+    <script>
+        $(function () {
+            var gameWon = false;
+            var columns = 3;
+            var rows = 3;
+            var gap = 4;
+            var puzzleDiv = document.getElementById("puzzleDiv");
+            var img = new Image();
+            var cells = [];
+            img.onload = function () {
+                var width = img.width - img.width % columns;
+                var height = img.height - img.height % rows;
+                puzzleDiv.style.width = width + gap + "px";
+                puzzleDiv.style.height = height + gap + "px";
+                var el;
+                var image;
+                var w = width / columns - gap;
+                var h = height / rows - gap;
+                var left = gap;
+                var top = gap;
+                for (var i = 0; i < columns * rows; i++) {
+                    if (i % columns == 0) {
+                        left = gap;
+                    }
+                    el = document.createElement("div");
+                    $(el).addClass('puzzlePiece');
+                    $(el).data("index", i);
+                    if (i < columns * rows - 1) {
+                        el.setAttribute("style", "-webkit-box-sizing: border-box; -moz-box-sizing: border-box; box-sizing: border-box; overflow:hidden;" +
+                                             "background-color: gray; position: absolute; width: " +
+                                             w + "px; height:" + h + "px;" + "left:" + (w * (i % columns) + left) + "px;top:" + (h * Math.floor(i / columns) + top) + "px;");
+                        $(el).addClass('puzzlePiece');
+                        image = document.createElement("img");
+                        image.setAttribute("src", this.src);
+                        image.setAttribute("style", "margin:" + (-Math.floor(i / columns) * h) + "px" + " 0 0 " + (-i % columns * w) + "px;");
+                        image.width = width;
+                        image.height = height;
+                        el.appendChild(image);
+
+                        var num = document.createElement('div');
+                        num.innerHTML = i + 1;
+                        num.setAttribute("class", "number");
+                        el.appendChild(num);
+                    }
+                    else {
+                        el.setAttribute("style", "border:none; -webkit-box-sizing: border-box; -moz-box-sizing: border-box; box-sizing: border-box; overflow:hidden;" +
+                                             "background-color: gray; position: absolute; width: " +
+                                             w + "px; height:" + h + "px;" + "left:" + (w * (i % columns) + left) + "px;top:" + (h * Math.floor(i / columns) + top) + "px;");
+                    }
+                    puzzleDiv.appendChild(el);
+                    $(el).mousedown(mouseDown);
+                    cells.push(el);
+                    left += gap;
+                    if (i % columns == columns - 1) {
+                        top += gap;
+                    }
+                }
+                randomiseCells();
+            };
+
+            function mouseDown(e) {
+                if (!gameWon) {
+                    var cellIndex = null;
+                    for (var i = 0; i < cells.length; i++) {
+                        if (this === cells[i]) {
+                            cellIndex = i;
+                        }
+                    }
+                    var empty = getEmptyNeighbour(cellIndex);
+                    if (empty >= 0) {
+                        swapCells(empty, cellIndex);
+                        decideStatus();
+                    }
+                }
+                e.stopPropagation();
+                return false;
+            }
+
+
+            function isEmpty(index) {
+                return cells.length - 1 === $(cells[index]).data("index");
+            }
+
+            function getEmptyNeighbour(index) {
+                var currentRow = Math.floor(index / columns);
+                var currentCol = index % columns;
+
+                if (currentCol - 1 >= 0) //left
+                {
+                    if (isEmpty(index - 1)) {
+                        return index - 1;
+                    }
+                }
+                if (currentCol + 1 < columns) //right
+                {
+                    if (isEmpty(index + 1)) {
+                        return index + 1;
+                    }
+                }
+                if (currentRow - 1 >= 0) //top
+                {
+                    if (isEmpty(index - columns)) {
+                        return index - columns;
+                    }
+                }
+                if (currentRow + 1 < columns)//bottom
+                {
+                    if (isEmpty(index + columns)) {
+                        return index + columns;
+                    }
+                }
+                return -1;
+            }
+
+            function randomiseCells() {
+                var emptyIndex = cells.length - 1;
+                for (var i = 0; i < 1000; i++) {
+                    emptyIndex = moveCell(emptyIndex, Math.floor(Math.random() * 4));
+                }
+            }
+
+            function moveCell(emptyCellIndex, direction) {
+                var newIndex = emptyCellIndex;
+                switch (direction) {
+                    case 0:
+                        if (emptyCellIndex % columns > 0) {
+                            swapCells(emptyCellIndex, emptyCellIndex - 1);
+                            newIndex = emptyCellIndex - 1;
+                        }
+                        break;
+                    case 1:
+                        if (emptyCellIndex % columns < columns - 1) {
+                            swapCells(emptyCellIndex, emptyCellIndex + 1);
+                            newIndex = emptyCellIndex + 1;
+                        }
+                        break;
+                    case 2:
+                        if (Math.floor(emptyCellIndex / columns) > 0) {
+                            swapCells(emptyCellIndex, emptyCellIndex - columns);
+                            newIndex = emptyCellIndex - columns;
+                        }
+                        break;
+                    case 3:
+                        if (Math.floor(emptyCellIndex / columns) < rows - 1) {
+                            swapCells(emptyCellIndex, emptyCellIndex + columns);
+                            newIndex = emptyCellIndex + columns;
+                        }
+                        break;
+                }
+                return newIndex;
+            }
+
+            function swapCells(emptyCellIndex, numberedCellIndex) {
+                var emptyCell = cells[emptyCellIndex];
+                var numberedCell = cells[numberedCellIndex];
+
+                cells[emptyCellIndex] = numberedCell;
+                cells[numberedCellIndex] = emptyCell;
+
+                var tempL = emptyCell.style.left;
+                var tempT = emptyCell.style.top;
+
+                emptyCell.style.left = numberedCell.style.left;
+                emptyCell.style.top = numberedCell.style.top;
+
+                numberedCell.style.top = tempT;
+                numberedCell.style.left = tempL;
+
+            }
+
+            function decideStatus() {
+                for (var i = 0; i < cells.length; i++) {
+                    if (i !== $(cells[i]).data("index")) {
+                        return;
+                    }
+                }
+                gameWon = true;
+                alert("You won the game!");
+            }
+            img.src = "image.jpg";
+
+            $('#resetButton').click(function () {
+                gameWon = false;
+                randomiseCells();
+            });
+        });
+    </script>
+</head>
+<body>
+    <div id="puzzleDiv"></div>
+    <button id="resetButton">Reset</button>
+</body>
+</html>
